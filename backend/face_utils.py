@@ -1,3 +1,6 @@
+subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "opencv-python"])
+subprocess.run([sys.executable, "-m", "pip", "install", "-q", "opencv-python-headless==4.8.1.78"])
+
 import os
 import io
 import sys

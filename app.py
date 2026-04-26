@@ -1,4 +1,7 @@
 import io
+import base64
+import pathlib
+import streamlit.components.v1 as components
 import shutil
 import tempfile
 import sys
@@ -22,9 +25,27 @@ TMP_DIR          = Path(tempfile.gettempdir())
 APP_NAME         = "Face Findr"
 
 ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "admin123"   # ← change before going live
+ADMIN_PASSWORD = st.secrets["ADMIN_PASSWORD"]   # ← change before going live
 
 EVENTS_ROOT_DIR.mkdir(exist_ok=True)
+
+# ── Video loader helper ────────────────────────────────────────────────────────
+def get_video_b64(video_filename: str = "bot.mp4") -> str:
+    """
+    Looks for the video file in a 'static' folder next to app.py.
+    Returns a base64-encoded string, or empty string if not found.
+    """
+    # Try relative to app.py location first, then current working dir
+    candidates = [
+        pathlib.Path(__file__).parent / "static" / video_filename,
+        pathlib.Path("static") / video_filename,
+        pathlib.Path(video_filename),
+    ]
+    for p in candidates:
+        if p.exists():
+            with open(p, "rb") as f:
+                return base64.b64encode(f.read()).decode()
+    return ""
 
 # ── GLOBAL CSS ─────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -64,6 +85,10 @@ h1,h2,h3,p,label,span,div { font-family: 'Nunito', sans-serif; }
     font-size: 13px !important;
     font-weight: 700 !important;
 }
+.stTextInput > div > div > input::placeholder {
+    color: #a09070 !important;
+    opacity: 1 !important;
+}
 
 /* ── Selectbox (all) ── */
 .stSelectbox label {
@@ -79,11 +104,15 @@ h1,h2,h3,p,label,span,div { font-family: 'Nunito', sans-serif; }
     font-family: 'Nunito', sans-serif !important;
     font-size: 14px !important;
     font-weight: 700 !important;
-    color: #2d2a1e !important;
+    color: #000000 !important;
     padding: 10px 16px !important;
     box-shadow: 0 2px 6px rgba(0,0,0,0.06) !important;
     cursor: pointer !important;
     transition: border-color 0.2s, box-shadow 0.2s !important;
+}
+.stSelectbox [data-baseweb="select"] * {
+    color: #000000 !important;
+    opacity: 1 !important;
 }
 .stSelectbox [data-baseweb="select"] > div:first-child:hover {
     border-color: #FF6B6B !important;
@@ -437,6 +466,151 @@ h1,h2,h3,p,label,span,div { font-family: 'Nunito', sans-serif; }
     margin-top: 12px;
     flex-wrap: wrap;
 }
+
+/* ── Download button (black style) ── */
+.stDownloadButton > button {
+    background: #0f172a !important;
+    color: #ffffff !important;
+    border-radius: 14px !important;
+    border: none !important;
+    font-family: 'Nunito', sans-serif !important;
+    font-weight: 800 !important;
+    padding: 11px 22px !important;
+    font-size: 15px !important;
+    box-shadow: 0 4px 0 #020617 !important;
+    transition: all 0.15s ease !important;
+}
+.stDownloadButton > button:hover {
+    background: #0f172a !important;
+    color: #ffffff !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 0 #020617 !important;
+    cursor: pointer !important;
+}
+.stDownloadButton > button:active {
+    transform: translateY(1px) !important;
+    box-shadow: 0 2px 0 #020617 !important;
+}
+
+/* ── Video loading container ── */
+.ff-video-loading-wrap {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    background: #FDFAF4;  /* SAME AS YOUR APP BG */
+    z-index: 99999;
+}
+
+/* Inner card (your current box) */
+.ff-video-loading-inner {
+    padding: 40px 24px;
+    border: 2.5px solid #e8e0cc;
+    border-radius: 28px;
+    background: #FDFAF4;
+    text-align: center;
+    width: 420px;
+}
+.ff-video-loading-wrap video {
+    width: 280px;
+    max-width: 100%;
+    border-radius: 16px;
+    margin-bottom: 16px;
+}
+.ff-video-title {
+    font-family: 'Caveat', cursive;
+    font-size: 26px;
+    font-weight: 700;
+    color: #2d2a1e;
+    margin-bottom: 6px;
+}
+.ff-video-sub {
+    font-size: 13px;
+    color: #a09070;
+    font-weight: 600;
+}
+
+/* ── Fallback loading animation (used when no video found) ── */
+@keyframes scan-line {
+    0%   { top: 10%; opacity: 1; }
+    100% { top: 85%; opacity: 0.3; }
+}
+@keyframes pulse-ring {
+    0%   { transform: scale(0.85); opacity: 0.9; }
+    50%  { transform: scale(1.05); opacity: 0.5; }
+    100% { transform: scale(0.85); opacity: 0.9; }
+}
+@keyframes dot-bounce {
+    0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+    40%            { transform: translateY(-8px); opacity: 1; }
+}
+@keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position:  200% 0; }
+}
+.ff-loading-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px 40px;
+    background: #FDFAF4;
+    border: 2.5px solid #e8e0cc;
+    border-radius: 28px;
+    margin: 24px 0;
+    position: relative;
+    overflow: hidden;
+}
+.ff-shimmer-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, #e8e0cc 0%, #FF6B6B 40%, #FFD166 60%, #e8e0cc 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s linear infinite;
+    border-radius: 28px 28px 0 0;
+}
+.ff-face-ring {
+    width: 90px; height: 90px;
+    border-radius: 50%;
+    border: 3px solid #FF6B6B;
+    display: flex; align-items: center; justify-content: center;
+    animation: pulse-ring 1.8s ease-in-out infinite;
+    position: relative;
+    margin-bottom: 20px;
+    flex-shrink: 0;
+}
+.ff-face-emoji { font-size: 40px; line-height: 1; }
+.ff-scan-line {
+    position: absolute;
+    left: 8px; right: 8px; height: 2px;
+    background: linear-gradient(90deg, transparent, #FF6B6B, transparent);
+    border-radius: 2px;
+    animation: scan-line 1.4s ease-in-out infinite alternate;
+}
+.ff-title {
+    font-family: 'Caveat', cursive;
+    font-size: 26px; font-weight: 700;
+    color: #2d2a1e; margin-bottom: 6px; text-align: center;
+}
+.ff-sub {
+    font-size: 13px; color: #a09070;
+    font-weight: 600; text-align: center; margin-bottom: 18px;
+}
+.ff-dots { display: flex; gap: 7px; align-items: center; }
+.ff-dot {
+    width: 8px; height: 8px;
+    background: #FF6B6B; border-radius: 50%;
+}
+.ff-dot:nth-child(1) { animation: dot-bounce 1.2s ease-in-out infinite 0s; }
+.ff-dot:nth-child(2) { animation: dot-bounce 1.2s ease-in-out infinite 0.2s; }
+.ff-dot:nth-child(3) { animation: dot-bounce 1.2s ease-in-out infinite 0.4s; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -465,12 +639,53 @@ def sanitize_folder_name(name: str) -> str:
     return safe[:60] if safe else "Untitled Event"
 
 
+def render_loading_screen(placeholder):
+    """
+    Renders a loading screen in the given st.empty() placeholder.
+    Uses the MP4 video from static/loadingg.mp4 if available,
+    otherwise falls back to the animated HTML loading widget.
+    """
+    video_b64 = get_video_b64("loadingg.mp4")
+
+    if video_b64:
+        
+        placeholder.markdown(f"""
+<div class="ff-video-loading-wrap">
+    <div class="ff-video-loading-inner">
+        <video autoplay loop muted playsinline>
+            <source src="data:video/mp4;base64,{video_b64}" type="video/mp4">
+        </video>
+        <div class="ff-video-title">Scanning your event photos…</div>
+        <div class="ff-video-sub">AI is comparing faces — this may take a moment</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+    else:
+        # Fallback: original animated HTML widget (no raw HTML leakage)
+        placeholder.markdown("""
+        <div class="ff-loading-wrap">
+            <div class="ff-shimmer-bar"></div>
+            <div class="ff-face-ring">
+                <div class="ff-scan-line"></div>
+                <span class="ff-face-emoji">🤳</span>
+            </div>
+            <div class="ff-title">Scanning your event photos…</div>
+            <div class="ff-sub">AI is comparing faces — this may take a moment</div>
+            <div class="ff-dots">
+                <div class="ff-dot"></div>
+                <div class="ff-dot"></div>
+                <div class="ff-dot"></div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+
 # ── Session state ──────────────────────────────────────────────────────────────
 _defaults = {
     "admin_logged_in":    False,
     "results":            None,
     "consent_given":      False,
-    "admin_active_event": None,   # path string of event being managed
+    "admin_active_event": None,
 }
 for k, v in _defaults.items():
     if k not in st.session_state:
@@ -531,11 +746,10 @@ def render_header():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  USER TAB  (unchanged)
+#  USER TAB
 # ══════════════════════════════════════════════════════════════════════════════
 def render_user_tab():
 
-    # ── Hero ──────────────────────────────────────────────────────────────────
     st.markdown("""
     <div style="display:flex;align-items:flex-start;gap:24px;margin-bottom:32px;flex-wrap:wrap">
         <div style="flex:1;min-width:280px">
@@ -545,8 +759,8 @@ def render_user_tab():
                 <span style="color:#FF6B6B">in every shot</span>
             </div>
             <div style="font-size:15px;color:#7a6f55;line-height:1.7;max-width:460px">
-                Pick your event, take a quick selfie, and we'll scan every photo in that
-                event to find the ones you're in. Live camera only — no file uploads,
+                Access your event photos effortlessly. Capture a selfie and our system will identify and return all images where you appear.
+                Live camera only — no file uploads,
                 no stored data, no fuss.
             </div>
         </div>
@@ -582,10 +796,9 @@ def render_user_tab():
         </div>
     </div>
     """, unsafe_allow_html=True)
-
+    loading_placeholder = st.empty()
     left, right = st.columns([1.05, 1], gap="large")
 
-    # ── LEFT: Consent ─────────────────────────────────────────────────────────
     with left:
         st.markdown("""
         <div class="fun-card fun-card-yellow">
@@ -612,22 +825,22 @@ def render_user_tab():
                 By proceeding, you agree to all of the following:
             </div>
             <div class="consent-row">
-                <span class="consent-icon">&#128247;</span>
+                <span class="consent-icon">📸</span>
                 <span>I <strong>voluntarily consent</strong> to the live camera capture of my selfie
                 by <strong>Face Findr</strong>. I understand this is a live capture, not a file upload.</span>
             </div>
             <div class="consent-row">
-                <span class="consent-icon">&#127919;</span>
+                <span class="consent-icon">🧭</span>
                 <span>My image will be used <strong>only</strong> for real-time identification
                 and retrieval of my event photos — nothing else.</span>
             </div>
             <div class="consent-row">
-                <span class="consent-icon">&#128465;</span>
+                <span class="consent-icon">⏳</span>
                 <span>My photo is <strong>processed temporarily</strong> and will <strong>not</strong>
                 be stored, saved, or retained after processing is complete.</span>
             </div>
             <div class="consent-row">
-                <span class="consent-icon">&#128683;</span>
+                <span class="consent-icon">🛡️</span>
                 <span>My data will <strong>not</strong> be used for profiling, tracking,
                 or sharing with any third parties.</span>
             </div>
@@ -697,15 +910,11 @@ def render_user_tab():
                 unsafe_allow_html=True,
             )
 
-    # ── RIGHT: Event picker + Camera + Search ─────────────────────────────────
     with right:
         st.markdown("""
         <div style="font-family:'Caveat',cursive;font-size:22px;font-weight:700;
                     color:#2d2a1e;margin-bottom:6px">
             Choose your event
-        </div>
-        <div style="font-size:13px;color:#a09070;font-weight:600;margin-bottom:14px">
-            Select the event you attended to search only those photos.
         </div>
         """, unsafe_allow_html=True)
 
@@ -740,13 +949,12 @@ def render_user_tab():
                 chosen_name = st.selectbox(
                     "Select an event",
                     options=event_labels,
-                    index=0,
+                    index=None,
                     key="user_event_select",
                     label_visibility="collapsed",
-                    placeholder="— Choose an event —",
+                    placeholder="Select the event you attended to search only those photos.",
                 )
-                selected_event_path = event_options.get(chosen_name)
-
+                selected_event_path = event_options.get(chosen_name) if chosen_name else None
                 if selected_event_path:
                     img_count = count_images_in_folder(selected_event_path)
                     st.markdown(f"""
@@ -794,6 +1002,8 @@ def render_user_tab():
                 key="camera_selfie",
                 label_visibility="collapsed",
             )
+        
+        threshold = 0.62
 
         if not camera_disabled and camera_photo is not None:
             st.markdown("""
@@ -806,16 +1016,7 @@ def render_user_tab():
             </div>
             """, unsafe_allow_html=True)
 
-        if not camera_disabled:
-            threshold = st.slider(
-                "Match sensitivity",
-                min_value=0.55, max_value=0.85, value=0.65, step=0.01,
-                help="Lower = more matches. Higher = fewer but more precise.",
-            )
-            label = "Strict" if threshold > 0.72 else "Lenient" if threshold < 0.60 else "Balanced"
-            st.caption(f"Threshold: {threshold:.2f} — {label}")
-        else:
-            threshold = 0.65
+       
 
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
@@ -830,21 +1031,35 @@ def render_user_tab():
 
         if search_clicked and can_search:
             selfie_bytes = camera_photo.getvalue()
-            with st.spinner("Scanning event photos — hang tight..."):
-                try:
-                    results = find_matching_images(
-                        selfie_bytes=selfie_bytes,
-                        event_folder=str(selected_event_path),
-                        threshold=threshold,
-                        tmp_selfie_path=str(TMP_DIR / "facefindr_selfie.jpg"),
-                    )
-                    st.session_state.results = results
-                except ValueError as e:
-                    st.markdown(f'<div class="pill-err">{e}</div>', unsafe_allow_html=True)
-                    st.session_state.results = None
-                except Exception as e:
-                    st.markdown(f'<div class="pill-err">Something went wrong: {e}</div>', unsafe_allow_html=True)
-                    st.session_state.results = None
+
+            # ── SHOW LOADING SCREEN (video or fallback) ───────────────────────
+            
+            render_loading_screen(loading_placeholder)
+
+            # ── RUN MODEL ─────────────────────────────────────────────────────
+            try:
+                results = find_matching_images(
+                    selfie_bytes=selfie_bytes,
+                    event_folder=str(selected_event_path),
+                    threshold=threshold,
+                    tmp_selfie_path=str(TMP_DIR / "facefindr_selfie.jpg"),
+                    max_workers=1 if sys.platform == "win32" else 4,
+                )
+                st.session_state.results = results
+
+            except ValueError as e:
+                loading_placeholder.empty()
+                st.markdown(f'<div class="pill-err">{e}</div>', unsafe_allow_html=True)
+                st.session_state.results = None
+
+            except Exception as e:
+                loading_placeholder.empty()
+                st.markdown(f'<div class="pill-err">Something went wrong: {e}</div>', unsafe_allow_html=True)
+                st.session_state.results = None
+
+            else:
+                # Success — clear loading screen before showing results
+                loading_placeholder.empty()
 
     # ── Results ───────────────────────────────────────────────────────────────
     if st.session_state.results is not None:
@@ -861,21 +1076,42 @@ def render_user_tab():
                 <div style="font-family:'Caveat',cursive;font-size:26px;font-weight:700;
                             color:#2d2a1e;margin-bottom:8px">No matches found!</div>
                 <div style="font-size:15px;color:#7a6f55;max-width:400px;margin:0 auto">
-                    Try sliding the sensitivity lower and searching again.
+                    Try retaking your selfie in better lighting and search again.
                     Or maybe you're just camera shy?
                 </div>
             </div>
             """, unsafe_allow_html=True)
         else:
             count = len(results)
-            st.markdown(f"""
-            <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;flex-wrap:wrap">
-                <div style="font-family:'Caveat',cursive;font-size:34px;font-weight:700;color:#2d2a1e">
-                    Found you in {count} photo{'s' if count != 1 else ''}!
+            import zipfile, io
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+                for match in results:
+                    img_path = Path(match["filepath"])
+                    if img_path.exists():
+                        zf.write(img_path, img_path.name)
+            zip_buffer.seek(0)
+            header_left, header_right = st.columns([2, 1])
+            with header_left:
+                st.markdown(f"""
+                <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-top:6px">
+                    <div style="font-family:'Caveat',cursive;font-size:34px;font-weight:700;color:#2d2a1e">
+                        Found you in {count} photo{'s' if count != 1 else ''}!
+                    </div>
+                    <span class="sticker sticker-green">Sorted by confidence</span>
                 </div>
-                <span class="sticker sticker-green">Sorted by confidence</span>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
+            with header_right:
+                st.markdown('<div style="display:flex;justify-content:flex-end;align-items:center;height:100%;padding-top:8px">', unsafe_allow_html=True)
+                st.download_button(
+                    "⬇ Download All Photos ",
+                    data=zip_buffer,
+                    file_name="my_event_photos.zip",
+                    mime="application/zip",
+                    key="download_all_btn",
+                    use_container_width=False,
+                )
+                st.markdown('</div>', unsafe_allow_html=True)
 
             grid = st.columns(4)
             for i, match in enumerate(results):
@@ -884,19 +1120,9 @@ def render_user_tab():
                     continue
                 with grid[i % 4]:
                     st.image(Image.open(img_path), use_container_width=True)
-                    confidence = match["confidence"]
-                    color = "#1e7a3a" if confidence >= 80 else "#8a6d00" if confidence >= 70 else "#c0392b"
-                    st.markdown(f"""
-                    <div style="font-size:11px;color:#a09070;margin-top:4px;overflow:hidden;
-                                text-overflow:ellipsis;white-space:nowrap"
-                         title="{match['filename']}">{match['filename']}</div>
-                    <div style="display:flex;justify-content:space-between;font-size:12px;
-                                color:#7a6f55;margin-top:4px;font-weight:700">
-                        <span>Match</span>
-                        <span style="color:{color}">{confidence}%</span>
-                    </div>
-                    <div class="cbar-bg">
-                        <div class="cbar-fill" style="width:{int(confidence)}%"></div>
+                    st.markdown("""
+                    <div style="font-size:13px;color:#1e7a3a;font-weight:700;margin-top:6px">
+                        ✓ Match
                     </div>
                     """, unsafe_allow_html=True)
                     with open(img_path, "rb") as f:
@@ -917,7 +1143,7 @@ def render_user_tab():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  ADMIN TAB  (redesigned)
+#  ADMIN TAB
 # ══════════════════════════════════════════════════════════════════════════════
 def render_admin_tab():
     if not st.session_state.admin_logged_in:
@@ -949,7 +1175,6 @@ def render_admin_tab():
                     )
         return
 
-    # ── Admin is logged in ────────────────────────────────────────────────────
     st.markdown("""
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;flex-wrap:wrap">
         <div style="font-family:'Caveat',cursive;font-size:28px;font-weight:700;color:#2d2a1e">
@@ -961,12 +1186,8 @@ def render_admin_tab():
 
     admin_left, admin_right = st.columns([1, 1.4], gap="large")
 
-    # ═══════════════════════════════════════════════════════════════════════════
-    #  LEFT PANEL — Create event + dropdown event selector
-    # ═══════════════════════════════════════════════════════════════════════════
     with admin_left:
 
-        # ── Create new event ──────────────────────────────────────────────────
         st.markdown("""
         <div class="section-label">📁 Create New Event</div>
         """, unsafe_allow_html=True)
@@ -979,13 +1200,12 @@ def render_admin_tab():
 
         new_event_name = st.text_input(
             "Event name",
-            placeholder="e.g. Annual Day 2025, Wedding – June 14…",
+            placeholder="e.g. Q3 Town Hall, Product Launch ",
             key="new_event_name",
             label_visibility="collapsed",
             on_change=_on_event_name_change,
         )
 
-        # Button enabled as soon as any character is typed (no Enter needed)
         create_disabled = len(st.session_state["new_event_name_val"].strip()) == 0
 
         if st.button(
@@ -1011,13 +1231,11 @@ def render_admin_tab():
 
         st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
 
-        # ── Divider ───────────────────────────────────────────────────────────
         st.markdown(
             "<hr style='border:none;border-top:2px dashed #e8e0cc;margin:4px 0 20px'>",
             unsafe_allow_html=True,
         )
 
-        # ── Fix 3: Event selector as dropdown ─────────────────────────────────
         events = get_event_folders()
 
         st.markdown(f"""
@@ -1040,93 +1258,64 @@ def render_admin_tab():
             </div>
             """, unsafe_allow_html=True)
         else:
-            # Dropdown to pick which event to manage
             event_names = [f.name for f in events]
             current_active = st.session_state.get("admin_active_event")
             current_active_name = Path(current_active).name if current_active else None
 
-            # Determine default index for dropdown
-            default_idx = 0
-            if current_active_name and current_active_name in event_names:
-                default_idx = event_names.index(current_active_name)
-
-            st.markdown("""
-            <div style="font-size:12px;font-weight:700;color:#7a6f55;margin-bottom:4px;
-                        display:flex;align-items:center;gap:6px">
-                <span>📋</span> Select event to manage
-            </div>
-            """, unsafe_allow_html=True)
-
             chosen_event_name = st.selectbox(
                 "Select event to manage",
                 options=event_names,
-                index=default_idx,
+                index=None,
                 key="admin_event_dropdown",
                 label_visibility="collapsed",
+                placeholder="📋 Select event to manage",
             )
 
-            # Sync active event from dropdown (no rerun — avoids swallowing button clicks)
-            chosen_folder = EVENTS_ROOT_DIR / chosen_event_name
-            st.session_state.admin_active_event = str(chosen_folder)
+            if chosen_event_name:
+                chosen_folder = EVENTS_ROOT_DIR / chosen_event_name
+                st.session_state.admin_active_event = str(chosen_folder)
 
-            # Info pill for selected event
-            img_count = count_images_in_folder(chosen_folder)
-            is_active = str(chosen_folder) == st.session_state.get("admin_active_event", "")
-            st.markdown(f"""
-            <div style="display:flex;align-items:center;justify-content:space-between;
-                        background:#f0fdf4;border:2px solid #9de0af;border-radius:12px;
-                        padding:10px 14px;margin:10px 0 14px">
-                <div style="display:flex;align-items:center;gap:8px">
-                    <span style="font-size:16px">{"✅" if is_active else "📁"}</span>
-                    <div>
-                        <div style="font-size:13px;font-weight:800;color:#1e7a3a;
-                                    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-                                    max-width:160px" title="{chosen_event_name}">
-                            {chosen_event_name}
-                        </div>
-                        <div style="font-size:11px;color:#4a9a5a;font-weight:600">
-                            {img_count} photo{"s" if img_count != 1 else ""}
+                img_count = count_images_in_folder(chosen_folder)
+                is_active = str(chosen_folder) == st.session_state.get("admin_active_event", "")
+                st.markdown(f"""
+                <div style="display:flex;align-items:center;justify-content:space-between;
+                            background:#f0fdf4;border:2px solid #9de0af;border-radius:12px;
+                            padding:10px 14px;margin:10px 0 14px">
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="font-size:16px">{"✅" if is_active else "📁"}</span>
+                        <div>
+                            <div style="font-size:13px;font-weight:800;color:#1e7a3a;
+                                        overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+                                        max-width:160px" title="{chosen_event_name}">
+                                {chosen_event_name}
+                            </div>
+                            <div style="font-size:11px;color:#4a9a5a;font-weight:600">
+                                {img_count} photo{"s" if img_count != 1 else ""}
+                            </div>
                         </div>
                     </div>
+                    <span class="sticker sticker-green" style="font-size:10px">Managing</span>
                 </div>
-                <span class="sticker sticker-green" style="font-size:10px">Managing</span>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
 
-            # Delete button for selected event — compact, right-aligned
-            st.markdown('<div class="admin-del-btn">', unsafe_allow_html=True)
-            if st.button(f'🗑  Delete  "{chosen_event_name}"', key=f"del_{chosen_event_name}"):
-                shutil.rmtree(chosen_folder, ignore_errors=True)
-                clear_embedding_cache()
-                st.session_state.admin_active_event = None
-                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
+                st.markdown('<div class="admin-del-btn">', unsafe_allow_html=True)
+                if st.button(f'🗑  Delete  "{chosen_event_name}"', key=f"del_{chosen_event_name}"):
+                    shutil.rmtree(chosen_folder, ignore_errors=True)
+                    clear_embedding_cache()
+                    st.session_state.admin_active_event = None
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
 
-        # Logout
         st.markdown('<div class="secondary-btn">', unsafe_allow_html=True)
         if st.button("🚪  Log out", key="logout_btn"):
             st.session_state.admin_logged_in = False
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Footer stats
-        events_all = get_event_folders()
-        total_photos_all = sum(count_images_in_folder(e) for e in events_all)
-        st.markdown(f"""
-        <div style="margin-top:20px;padding:12px 16px;background:#fff;border:2px solid #e8e0cc;
-                    border-radius:12px;font-size:12px;color:#a09070;line-height:1.9">
-            <div><strong>Platform:</strong> {sys.platform}</div>
-            <div><strong>Total events:</strong> {len(events_all)}</div>
-            <div><strong>Total photos:</strong> {total_photos_all}</div>
-            <div><strong>Cache:</strong> embeddings_cache/</div>
-        </div>
-        """, unsafe_allow_html=True)
+        
 
-    # ═══════════════════════════════════════════════════════════════════════════
-    #  RIGHT PANEL — Upload & manage photos for selected event
-    # ═══════════════════════════════════════════════════════════════════════════
     with admin_right:
         active_event_path = st.session_state.get("admin_active_event")
 
@@ -1146,7 +1335,6 @@ def render_admin_tab():
             active_folder = Path(active_event_path)
             img_count = count_images_in_folder(active_folder)
 
-            # Header
             st.markdown(f"""
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
                 <span style="font-size:20px">📤</span>
@@ -1161,7 +1349,6 @@ def render_admin_tab():
             </div>
             """, unsafe_allow_html=True)
 
-            # ── File uploader ─────────────────────────────────────────────────
             event_files = st.file_uploader(
                 "Select photos to upload",
                 type=["jpg", "jpeg", "png", "webp", "bmp"],
@@ -1175,7 +1362,6 @@ def render_admin_tab():
 
             st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
 
-            # ── Fix 2: Compact, aligned action buttons in one clean row ───────
             col_up, col_clr, col_cache = st.columns([1.2, 1, 1], gap="small")
 
             with col_up:
@@ -1204,7 +1390,6 @@ def render_admin_tab():
                 )
                 st.markdown('</div>', unsafe_allow_html=True)
 
-            # ── Handle button actions ─────────────────────────────────────────
             if upload_clicked and event_files:
                 prog = st.progress(0, text="Saving…")
                 for i, f in enumerate(event_files):
@@ -1230,7 +1415,6 @@ def render_admin_tab():
                 clear_embedding_cache()
                 st.markdown('<div class="pill-ok" style="margin-top:6px">Cache cleared successfully.</div>', unsafe_allow_html=True)
 
-            # ── Status pill ───────────────────────────────────────────────────
             refreshed_count = count_images_in_folder(active_folder)
             pill_class = "pill-ok" if refreshed_count > 0 else "pill-info"
             pill_msg = (
@@ -1242,7 +1426,6 @@ def render_admin_tab():
 
             st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 
-            # ── Photo preview grid ────────────────────────────────────────────
             st.markdown(f"""
             <div class="section-label">
                 📸 Photos in "{active_folder.name}"

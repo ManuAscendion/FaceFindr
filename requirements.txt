@@ -1,8 +1,10 @@
 streamlit>=1.35.0
 deepface==0.0.93
-opencv-python-headless==4.10.0.84
+opencv-python-headless==4.8.1.78
 tensorflow-cpu==2.15.1
 tf-keras==2.15.1
 Pillow>=10.3.0
 numpy==1.26.4
+retina-face==0.0.17
+mtcnn==0.1.1
 -c constraints.txt

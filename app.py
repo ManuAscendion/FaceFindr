@@ -25,7 +25,7 @@ TMP_DIR          = Path(tempfile.gettempdir())
 APP_NAME         = "Face Findr"
 
 ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = st.secrets["ADMIN_PASSWORD"]   # ← change before going live
+ADMIN_PASSWORD = st.secrets["ADMIN_PASSWORD"]   
 
 EVENTS_ROOT_DIR.mkdir(exist_ok=True)
 

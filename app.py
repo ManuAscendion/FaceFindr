@@ -110,19 +110,33 @@ h1,h2,h3,p,label,span,div { font-family: 'Nunito', sans-serif; }
     cursor: pointer !important;
     transition: border-color 0.2s, box-shadow 0.2s !important;
 }
-.stSelectbox [data-baseweb="select"] * {
+/* Color every descendant EXCEPT the hidden search-input. Forcing opacity:1 on
+   that input was revealing it on top of the selected value text, which is what
+   made the box look blank once an event was chosen. */
+.stSelectbox [data-baseweb="select"] *:not(input) {
     color: #000000 !important;
     opacity: 1 !important;
+}
+.stSelectbox [data-baseweb="select"] input {
+    color: #000000 !important;
+    background: transparent !important;
 }
 .stSelectbox [data-baseweb="select"] > div:first-child:hover {
     border-color: #FF6B6B !important;
     box-shadow: 0 3px 10px rgba(255,107,107,0.15) !important;
 }
-/* Red arrow icon */
-.stSelectbox [data-baseweb="select"] svg {
+/* Dropdown chevron stays red — it's always the last icon in the control */
+.stSelectbox [data-baseweb="select"] svg:last-of-type {
     fill: #FF6B6B !important;
     width: 18px !important;
     height: 18px !important;
+}
+/* Clear ("x") icon — muted/smaller so it matches the palette instead of
+   looking like an error state once a value is selected */
+.stSelectbox [data-baseweb="select"] svg:not(:last-of-type) {
+    fill: #b5a98a !important;
+    width: 14px !important;
+    height: 14px !important;
 }
 
 /* ── Buttons (global) ── */

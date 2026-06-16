@@ -854,7 +854,7 @@ def render_user_tab():
                 be stored, saved, or retained after processing is complete.</span>
             </div>
             <div class="consent-row">
-                <span class="consent-icon">🛡️</span>
+                <span class="consent-icon"></span>
                 <span>My data will <strong>not</strong> be used for profiling, tracking,
                 or sharing with any third parties.</span>
             </div>

@@ -105,11 +105,28 @@ h1,h2,h3,p,label,span,div { font-family: 'Nunito', sans-serif; }
     font-size: 14px !important;
     font-weight: 700 !important;
     color: #000000 !important;
-    padding: 10px 16px !important;
+    padding: 10px 12px !important;
     box-shadow: 0 2px 6px rgba(0,0,0,0.06) !important;
     cursor: pointer !important;
     transition: border-color 0.2s, box-shadow 0.2s !important;
 }
+
+.stSelectbox [data-baseweb="select"] > div:first-child > div:first-child {
+    min-width: 60px !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+}
+.stSelectbox [data-baseweb="select"] > div:first-child > div:first-child > div:first-child {
+    color: #000000 !important;
+    opacity: 1 !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+    max-width: 100% !important;
+    flex-shrink: 0 !important;
+}
+
 /* Color every descendant EXCEPT the hidden search-input. Forcing opacity:1 on
    that input was revealing it on top of the selected value text, which is what
    made the box look blank once an event was chosen. */

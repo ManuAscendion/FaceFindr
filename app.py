@@ -110,7 +110,9 @@ h1,h2,h3,p,label,span,div { font-family: 'Nunito', sans-serif; }
     cursor: pointer !important;
     transition: border-color 0.2s, box-shadow 0.2s !important;
 }
-
+/* The value row (holds the selected text) is allowed by the browser to shrink
+   to 0px once the clear icon appears, because it has overflow:hidden. Give it
+   a floor so the chosen event name always has room to render. */
 .stSelectbox [data-baseweb="select"] > div:first-child > div:first-child {
     min-width: 60px !important;
     overflow: hidden !important;
@@ -126,11 +128,16 @@ h1,h2,h3,p,label,span,div { font-family: 'Nunito', sans-serif; }
     max-width: 100% !important;
     flex-shrink: 0 !important;
 }
-
 /* Color every descendant EXCEPT the hidden search-input. Forcing opacity:1 on
    that input was revealing it on top of the selected value text, which is what
    made the box look blank once an event was chosen. */
 .stSelectbox [data-baseweb="select"] *:not(input) {
+    color: #000000 !important;
+    opacity: 1 !important;
+}
+/* Defensive extra coverage in case a future Streamlit version renders the
+   selected value in a span instead of a div */
+.stSelectbox [data-baseweb="select"] span {
     color: #000000 !important;
     opacity: 1 !important;
 }
